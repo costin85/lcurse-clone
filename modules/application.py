@@ -190,8 +190,8 @@ class MainWidget(Qt.QMainWindow):
 
         self.addonList = Grid(self)
 
-        self.addonList.setColumnCount(5)
-        self.addonList.setHorizontalHeaderLabels(["Name", "Url", "Version", "Toc", "Allow Beta"])
+        self.addonList.setColumnCount(6)
+        self.addonList.setHorizontalHeaderLabels(["Name", "Url", "Version", "Toc", "Allow Beta", "Classic"])
 
         self.resize(1070, 815)
         screen = Qt.QDesktopWidget().screenGeometry()
@@ -316,7 +316,7 @@ class MainWidget(Qt.QMainWindow):
                     row = self.addonList.rowCount()
                     if not self.addonList.findItems(name, Qt.Qt.MatchExactly):
                         self.addonList.setRowCount(row + 1)
-                        self.insertAddon(row, name, uri, version, tocVersion, False)
+                        self.insertAddon(row, name, uri, version, tocVersion, False, False)
         self.addonList.resizeColumnsToContents()
         self.saveAddons()
 
@@ -324,7 +324,7 @@ class MainWidget(Qt.QMainWindow):
         pref = preferences.PreferencesDlg(self)
         pref.exec_()
 
-    def insertAddon(self, row, name, uri, version, tocVersion, allowBeta):
+    def insertAddon(self, row, name, uri, version, tocVersion, allowBeta, classic):
         self.addonList.setItem(row, 0, Qt.QTableWidgetItem(name))
         self.addonList.setItem(row, 1, Qt.QTableWidgetItem(uri))
         self.addonList.setItem(row, 2, Qt.QTableWidgetItem(version))
@@ -332,6 +332,9 @@ class MainWidget(Qt.QMainWindow):
         allowBetaItem = Qt.QTableWidgetItem()
         allowBetaItem.setCheckState(Qt.Qt.Checked if allowBeta else Qt.Qt.Unchecked)
         self.addonList.setItem(row, 4, allowBetaItem)
+        classicAddon = Qt.QTableWidgetItem()
+        classicAddon.setCheckState(Qt.Qt.Checked if classic else Qt.Qt.Unchecked)
+        self.addonList.setItem(row, 5, classicAddon)
 
     def loadAddonCatalog(self):
         if os.path.exists(defines.LCURSE_ADDON_CATALOG):
@@ -386,6 +389,10 @@ class MainWidget(Qt.QMainWindow):
             allowBetaItem = Qt.QTableWidgetItem()
             allowBetaItem.setCheckState(Qt.Qt.Checked if allowBeta else Qt.Qt.Unchecked)
             self.addonList.setItem(row, 4, allowBetaItem)
+            classic = addon.get("classic", False)
+            classicAddon = Qt.QTableWidgetItem()
+            classicAddon.setCheckState(Qt.Qt.Checked if classic else Qt.Qt.Unchecked)
+            self.addonList.setItem(row, 5, classicAddon)
         self.addonList.resizeColumnsToContents()
         self.adjustSize()
         
@@ -399,7 +406,8 @@ class MainWidget(Qt.QMainWindow):
                 uri=str(self.addonList.item(row, 1).text()),
                 version=str(self.addonList.item(row, 2).text()),
                 toc=str(self.addonList.item(row,3).text()),
-                allowbeta=bool(self.addonList.item(row, 4).checkState() == Qt.Qt.Checked)
+                allowbeta=bool(self.addonList.item(row, 4).checkState() == Qt.Qt.Checked),
+                classic=bool(self.addonList.item(row, 5).checkState() == Qt.Qt.Checked)
             ))
         data={}
         data['addons'] = addons
@@ -451,6 +459,9 @@ class MainWidget(Qt.QMainWindow):
             allowBetaItem = Qt.QTableWidgetItem()
             allowBetaItem.setCheckState(Qt.Qt.Unchecked)
             self.addonList.setItem(newrow, 4, allowBetaItem)
+            classicAddon = Qt.QTableWidgetItem()
+            classicAddon.setCheckState(Qt.Qt.Unchecked)
+            self.addonList.setItem(newrow, 5, classicAddon)
 
     def updateDatabaseFormat(self,oldVersion):
         print("Db version is ", oldVersion, " vs ", defines.LCURSE_DBVERSION)
@@ -562,7 +573,8 @@ class MainWidget(Qt.QMainWindow):
         uri = self.addonList.item(row, 1).text()
         version = self.addonList.item(row, 2).text()
         allowBeta = bool(self.addonList.item(row, 4).checkState() == Qt.Qt.Checked)
-        addons.append((row, name, uri, version, allowBeta))
+        classic = bool(self.addonList.item(row, 5).checkState() == Qt.Qt.Checked)
+        addons.append((row, name, uri, version, allowBeta, classic))
 
         checkDlg = waitdlg.CheckDlg(self, addons)
         checkDlg.checkFinished.connect(self.onCheckFinished)
@@ -575,7 +587,8 @@ class MainWidget(Qt.QMainWindow):
             uri = self.addonList.item(row, 1).text()
             version = self.addonList.item(row, 2).text()
             allowBeta = bool(self.addonList.item(row, 4).checkState() == Qt.Qt.Checked)
-            addons.append((row, name, uri, version, allowBeta))
+            classic = bool(self.addonList.item(row, 5).checkState() == Qt.Qt.Checked)
+            addons.append((row, name, uri, version, allowBeta, classic))
 
         checkDlg = waitdlg.CheckDlg(self, addons)
         checkDlg.checkFinished.connect(self.onCheckFinished)

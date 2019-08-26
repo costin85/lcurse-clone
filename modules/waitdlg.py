@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import urllib.parse
 from urllib.request import build_opener, HTTPCookieProcessor, HTTPError
 from http import cookiejar
+from pkg_resources import parse_version
 import zipfile
 from modules import defines
 import os
@@ -100,6 +101,7 @@ class CheckDlg(Qt.QDialog):
         cancelBox.addStretch()
         layout.addLayout(cancelBox)
         self.addons = addons
+#        print(addons)
         self.maxThreads = int(settings.value(defines.LCURSE_MAXTHREADS_KEY, defines.LCURSE_MAXTHREADS_DEFAULT))
         self.sem = Qt.QSemaphore(self.maxThreads)
 
@@ -189,19 +191,28 @@ class CheckWorker(Qt.QThread):
             html = response.read()
             soup = BeautifulSoup(html, "lxml")
             beta=self.addon[4]
-            lis = soup.findAll("tr","project-file-list__item")
+            lis = soup.select("div.listing-body")
+            lis = lis[0].findAll("tr")
             if lis:
-                versionIdx = 0
+                print("#############################################################")
+                versionIdx = 1
                 isOk=False
                 while True:
-                    isOk= beta or lis[versionIdx].td.span.attrs['title']=='Release'
-                    if isOk:
+                    row=lis[versionIdx]
+                    gameVersion=row.find("div",attrs={'class':'mr-2'}).string.strip()
+                    print("game: {}, idx: {}".format(gameVersion, versionIdx))
+                    if self.addon[5] and gameVersion == '1.13.2':
+                        isOk= beta or lis[versionIdx].td.span.text=='R'
+                        if isOk:
+                            break
+                    elif gameVersion != "1.13.2" and lis[versionIdx].td.span.text=='R':
                         break
                     versionIdx=versionIdx+1
-                row=lis[versionIdx]
-                version=row.find("span","table__content file__name").string
+                version=row.find("a",attrs={'data-action':"file-link"}).string
+                print(gameVersion)
                 if str(self.addon[3]) != version:
-                    downloadLink="https://www.curseforge.com"+ row.find("a").attrs['href'] + '/file'
+                    #https://www.curseforge.com/wow/addons/details/download/2730880/file
+                    downloadLink="https://www.curseforge.com"+ row.find("a",attrs={'class':'button--hollow'}).attrs['href'] + '/file'
                     return (True, (version, downloadLink))
             return (False, ("", ""))
             
@@ -379,21 +390,26 @@ class UpdateCatalogWorker(Qt.QThread):
     def retrievePartialListOfAddons(self, page):
         response = OpenWithRetry("http://www.curseforge.com/wow/addons?page={}".format(page))
         soup = BeautifulSoup(response.read(), "lxml")
+#        print(soup)
         # Curse returns a soft-500
         if soup.find_all("h2", string="Error"):
             print("Server-side error while getting addon list.")
 
         lastpage = 1
         if page == 1:
-            pager = soup.select("ul.b-pagination-list.paging-list.j-tablesorter-pager.j-listing-pagination li")
+#            pager = soup.select("ul.b-pagination-list.paging-list.j-tablesorter-pager.j-listing-pagination li")
+            pager = soup.select("a.pagination-item")
+            print(pager)
             if pager:
-                lastpage = int(pager[len(pager) - 2].contents[0].contents[0])
+                lastpage = int(pager[len(pager) - 1].contents[0].contents[0])
+#                print(lastpage)
 
-        projects = soup.select("li.project-list-item")  # li .title h4 a")
+        projects = soup.select("div.project-listing-row")  # li .title h4 a")
         self.addonsMutex.lock()
+#        print(projects)
         for project in projects:
-            links=project.select("a.button--download")
-            texts=project.select("a h2")
+            links=project.select("a.button.button--hollow")
+            texts=project.select("a h3")
             for text in texts:
                 nome=text.string.replace('\\r','').replace('\\n','').strip()
                 break

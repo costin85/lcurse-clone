@@ -1,6 +1,7 @@
 from PyQt5 import Qt
 from bs4 import BeautifulSoup
 import urllib.parse
+import requests
 from urllib.request import build_opener, HTTPCookieProcessor, HTTPError
 from http import cookiejar
 from pkg_resources import parse_version
@@ -15,12 +16,13 @@ from threading import Lock
 from subprocess import check_output, check_call
 import hashlib
 import json
+import cfscrape
 
+scraper = cfscrape.create_scraper()
 opener = build_opener(HTTPCookieProcessor(cookiejar.CookieJar()))
 
 # default User-Agent ('Python-urllib/2.6') will *not* work
 opener.addheaders = [('User-Agent', 'Mozilla/5.0'), ]
-
 # Debug helper: caches html page to not hammer server while testing/debugging/coding    
 class CachedResponse:
     data = ""
@@ -62,12 +64,12 @@ def OpenWithRetry(url):
     # Retry 5 times
     while count < maxcount:
         try:
-            response = opener.open(urllib.parse.urlparse(urllib.parse.quote(url, ':/?=')).geturl())
+            response = scraper.get(urllib.parse.urlparse(urllib.parse.quote(url, ':/?=')).geturl()).content
 
             return response
 
         except Exception as e:
-            print("Could not open '{}', retrying... ({})".format(url, count))
+            print("Could not open '{}' - {}, retrying... ({})".format(url, count, e))
 
             count = count + 1
             time.sleep(1)
@@ -188,8 +190,9 @@ class CheckWorker(Qt.QThread):
             pattern = re.compile("-nolib$")
             url = self.addon[2] + '/files'
             response = OpenWithRetry(url)
-            html = response.read()
-            soup = BeautifulSoup(html, "lxml")
+#            html = response.read()
+#            soup = BeautifulSoup(html, "lxml")
+            soup = BeautifulSoup(response, "lxml")
             beta=self.addon[4]
             lis = soup.select("div.listing-body")
             lis = lis[0].findAll("tr")
@@ -308,7 +311,8 @@ class UpdateWorker(Qt.QThread):
             dest = "{}/_retail_/Interface/AddOns/".format(settings.value(defines.WOW_FOLDER_KEY, defines.WOW_FOLDER_DEFAULT))
 
             with tempfile.NamedTemporaryFile('w+b') as zipped:
-                zipped.write(response.read())
+#                zipped.write(response.read())
+                zipped.write(response)
                 zipped.seek(0)
                 with zipfile.ZipFile(zipped, 'r') as z:
                     r=re.compile(".*\.toc$")
@@ -389,7 +393,8 @@ class UpdateCatalogWorker(Qt.QThread):
 
     def retrievePartialListOfAddons(self, page):
         response = OpenWithRetry("http://www.curseforge.com/wow/addons?page={}".format(page))
-        soup = BeautifulSoup(response.read(), "lxml")
+#        soup = BeautifulSoup(response.read(), "lxml")
+        soup = BeautifulSoup(response, "lxml")
 #        print(soup)
         # Curse returns a soft-500
         if soup.find_all("h2", string="Error"):

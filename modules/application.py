@@ -23,7 +23,8 @@ from PyQt5 import QtGui
 
 opener = build_opener(HTTPCookieProcessor(cookiejar.CookieJar()))
 # default User-Agent ('Python-urllib/2.6') will *not* work
-opener.addheaders = [('User-Agent', 'Mozilla/5.0'), ]
+#opener.addheaders = [('User-Agent', 'Mozilla/5.0'), ]
+opener.addheaders = [('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64; rv:33.0) Gecko/20100101 Firefox/33.0'), ('Accept-Language','en-US,en;q=0.5'), ('Connection','keep-alive'), ]
 
 class Grid(Qt.QTableWidget):
     def __init__(self, parent=None):

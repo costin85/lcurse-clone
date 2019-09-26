@@ -9,3 +9,5 @@ python_version = '3.6'
 beautifulsoup4 = '>4.5.3'
 lxml = '>3.6'
 PyQt5 = '>5.7'
+requests = "*"
+cfscrape = "*"

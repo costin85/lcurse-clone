@@ -204,11 +204,11 @@ class CheckWorker(Qt.QThread):
                     row=lis[versionIdx]
                     gameVersion=row.find("div",attrs={'class':'mr-2'}).string.strip()
                     print("game: {}, idx: {}".format(gameVersion, versionIdx))
-                    if self.addon[5] and gameVersion == '1.13.2':
+                    if self.addon[5] and "1.13" in gameVersion:
                         isOk= beta or lis[versionIdx].td.span.text=='R'
                         if isOk:
                             break
-                    elif gameVersion != "1.13.2" and lis[versionIdx].td.span.text=='R':
+                    elif not "1.13" in gameVersion and lis[versionIdx].td.span.text=='R':
                         break
                     versionIdx=versionIdx+1
                 version=row.find("a",attrs={'data-action':"file-link"}).string
